@@ -2,13 +2,13 @@ using Confluent.Kafka;
 
 namespace KafkaParallelConsumer;
 
-public class SerialWorker : BackgroundService
+public class ParallelWorker : BackgroundService
 {
-    private readonly ILogger<SerialWorker> logger;
+    private readonly ILogger<ParallelWorker> logger;
     private readonly IConsumer<string, string> consumer;
     private readonly IProcessor<string, string> processor;
 
-    public SerialWorker(ILogger<SerialWorker> logger, IConsumer<string, string> consumer, IProcessor<string, string> processor)
+    public ParallelWorker(ILogger<ParallelWorker> logger, IConsumer<string, string> consumer, IProcessor<string, string> processor)
     {
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
         this.consumer = consumer ?? throw new ArgumentNullException(nameof(consumer));
