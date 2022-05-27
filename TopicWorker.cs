@@ -6,22 +6,22 @@ namespace KafkaParallelConsumer
     internal class TopicWorker
     {
         private readonly ChannelReader<ConsumeResult<string, string>> channelReader;
-        private readonly IProcessor<string, string> processor;
+        private readonly Func<ConsumeResult<string, string>, CancellationToken, Task> processingAction;
 
-        public TopicWorker(ChannelReader<ConsumeResult<string, string>> channelReader, IProcessor<string, string> processor)
+        public TopicWorker(ChannelReader<ConsumeResult<string, string>> channelReader,
+            Func<ConsumeResult<string, string>, CancellationToken, Task> processingAction)
         {
-            this.channelReader = channelReader;
-            this.processor = processor;
+            this.channelReader = channelReader ?? throw new ArgumentNullException(nameof(channelReader));
+            this.processingAction = processingAction ?? throw new ArgumentNullException(nameof(processingAction));
         }
 
         internal async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            ConsumeResult<string, string> item;
             while (await channelReader.WaitToReadAsync(cancellationToken))
             {
-                while (channelReader.TryRead(out item!))
+                while (channelReader.TryRead(out var item))
                 {
-                    await processor.ProcessAsync(item, cancellationToken);
+                    await processingAction(item, cancellationToken);
                 }
             }
         }
