@@ -28,6 +28,7 @@ IHost host = Host.CreateDefaultBuilder(args)
       if (hostContext.Configuration.GetValue<bool>("UseParallel"))
       {
           services.AddHostedService<ParallelWorker>();
+          services.AddSingleton<ChannelProvider>();
           services.AddSingleton(_ => new ConsumerBuilder<string, string>(config)
                                             //.SetPartitionsAssignedHandler(PartitionsAssignedHandler) //TODO
                                             .Build());
