@@ -2,6 +2,13 @@ using Confluent.Kafka;
 using KafkaParallelConsumer;
 
 IHost host = Host.CreateDefaultBuilder(args)
+    .ConfigureLogging(c => c.AddSimpleConsole(o =>
+    {
+        o.SingleLine = true;
+        o.ColorBehavior = Microsoft.Extensions.Logging.Console.LoggerColorBehavior.Enabled;
+        o.IncludeScopes = true;
+        o.TimestampFormat = "hh:mm:ss:fff ";
+    }))
     .ConfigureServices(services =>
     {
         services.AddHostedService<Worker>();
