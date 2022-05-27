@@ -14,7 +14,7 @@ IHost host = Host.CreateDefaultBuilder(args)
       var config = new ConsumerConfig
       {
           BootstrapServers = "localhost:9092",
-          GroupId = "csharp-consumer",
+          GroupId = "csharp-consumer2",
           EnableAutoCommit = false,
           StatisticsIntervalMs = 5000,
           SessionTimeoutMs = 6000,
@@ -22,13 +22,14 @@ IHost host = Host.CreateDefaultBuilder(args)
           EnablePartitionEof = false,
           // A good introduction to the CooperativeSticky assignor and incremental rebalancing:
           // https://www.confluent.io/blog/cooperative-rebalancing-in-kafka-streams-consumer-ksqldb/
-          PartitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky
+          PartitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky,
       };
 
       if (hostContext.Configuration.GetValue<bool>("UseParallel"))
       {
           services.AddHostedService<ParallelWorker>();
           services.AddSingleton(_ => new ConsumerBuilder<string, string>(config)
+                                            //.SetPartitionsAssignedHandler(PartitionsAssignedHandler) //TODO
                                             .Build());
       }
       else
