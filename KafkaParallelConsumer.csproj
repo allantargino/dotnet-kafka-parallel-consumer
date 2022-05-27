@@ -4,8 +4,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>dotnet-kakfa_worker-CE977732-A35A-42DA-9ED3-3900155D8B96</UserSecretsId>
-    <RootNamespace>kakfa_worker</RootNamespace>
+    <RootNamespace>KafkaParallelConsumer</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

@@ -5,7 +5,7 @@ IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureServices(services =>
     {
         services.AddHostedService<Worker>();
-        services.AddSingleton<IConsumer<byte[], byte[]>>(svc =>
+        services.AddSingleton<IConsumer<string, string>>(svc =>
         {
             var config = new ConsumerConfig
             {
@@ -21,9 +21,11 @@ IHost host = Host.CreateDefaultBuilder(args)
                 PartitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky
             };
 
-            return new ConsumerBuilder<byte[], byte[]>(config)
+            return new ConsumerBuilder<string, string>(config)
                         .Build();
         });
+
+        services.AddSingleton<IProcessor<string, string>, Processor<string,string>>();
     })
     .Build();
 

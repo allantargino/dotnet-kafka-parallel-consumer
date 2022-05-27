@@ -1,4 +1,4 @@
 PRODUCER keyed-message
 topic: dev.input1
 key: mykeyq
-content
+{{animal.type}}
