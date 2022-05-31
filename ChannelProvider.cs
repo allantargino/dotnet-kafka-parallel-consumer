@@ -3,27 +3,28 @@ using System.Threading.Channels;
 
 namespace KafkaParallelConsumer;
 
-public sealed class ChannelProvider
+public sealed class ChannelProvider<TKey, TValue>
 {
-    private readonly Dictionary<TopicPartition, Channel<ConsumeResult<string, string>>> channels;
+    private readonly Dictionary<TopicPartition, Channel<ConsumeResult<TKey, TValue>>> channels;
     private readonly Dictionary<TopicPartition, Task> workers;
-    private readonly ILogger<ChannelProvider> logger;
+    private readonly ILogger<ChannelProvider<TKey, TValue>> logger;
 
-    public ChannelProvider(ILogger<ChannelProvider> logger)
+    public ChannelProvider(ILogger<ChannelProvider<TKey, TValue>> logger)
     {
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        this.channels = new Dictionary<TopicPartition, Channel<ConsumeResult<string, string>>>();
+        this.channels = new Dictionary<TopicPartition, Channel<ConsumeResult<TKey, TValue>>>();
         this.workers = new Dictionary<TopicPartition, Task>();
     }
 
-    public ChannelWriter<ConsumeResult<string, string>> GetChannelWriter(TopicPartition topicPartition, Func<ConsumeResult<string, string>, CancellationToken, Task> processingAction, CancellationToken cancellationToken)
+    public ChannelWriter<ConsumeResult<TKey, TValue>> GetChannelWriter(IConsumer<TKey, TValue> consumer, TopicPartition topicPartition,
+        Func<ConsumeResult<TKey, TValue>, CancellationToken, Task> processingAction, CancellationToken cancellationToken)
     {
         var channel = channels[topicPartition];
 
         if (!workers.ContainsKey(topicPartition))
         {
-            var topicWorker = new TopicWorker(channel.Reader, processingAction);
+            var topicWorker = new TopicPartitionWorker<TKey, TValue>(consumer, channel.Reader, processingAction, commitSynchronous: false);
 
             workers.Add(topicPartition, topicWorker.ExecuteAsync(cancellationToken));
         }
@@ -31,7 +32,7 @@ public sealed class ChannelProvider
         return channel.Writer;
     }
 
-    public IEnumerable<TopicPartitionOffset> PartitionsAssignedHandler(IConsumer<string, string> _, List<TopicPartition> tps)
+    public IEnumerable<TopicPartitionOffset> PartitionsAssignedHandler(IConsumer<TKey, TValue> _, List<TopicPartition> tps)
     {
         var tpos = new TopicPartitionOffset[tps.Count];
         for (int i = 0; i < tps.Count; i++)
@@ -42,7 +43,7 @@ public sealed class ChannelProvider
 
             if (!channels.ContainsKey(tps[i]))
             {
-                var channel = Channel.CreateUnbounded<ConsumeResult<string, string>>(new UnboundedChannelOptions()
+                var channel = Channel.CreateUnbounded<ConsumeResult<TKey, TValue>>(new UnboundedChannelOptions()
                 {
                     AllowSynchronousContinuations = false,
                     SingleReader = true,
@@ -55,7 +56,7 @@ public sealed class ChannelProvider
         return tpos;
     }
 
-    public IEnumerable<TopicPartitionOffset> PartitionsLostHandler(IConsumer<string, string> _, List<TopicPartitionOffset> tpos)
+    public IEnumerable<TopicPartitionOffset> PartitionsLostHandler(IConsumer<TKey, TValue> _, List<TopicPartitionOffset> tpos)
     {
         foreach (var tpo in tpos)
         {

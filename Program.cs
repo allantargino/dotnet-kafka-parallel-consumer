@@ -10,41 +10,24 @@ IHost host = Host.CreateDefaultBuilder(args)
         o.TimestampFormat = "hh:mm:ss:fff ";
     }))
     .ConfigureServices((hostContext, services) =>
-  {
-      var config = new ConsumerConfig
-      {
-          BootstrapServers = "localhost:9092",
-          GroupId = "consumer-id",
-          EnableAutoCommit = false,
-          StatisticsIntervalMs = 5000,
-          SessionTimeoutMs = 6000,
-          AutoOffsetReset = AutoOffsetReset.Earliest,
-          EnablePartitionEof = false,
-      };
+    {
+        var configuration = hostContext.Configuration.GetRequiredSection("Kafka:Consumer");
 
-      if (hostContext.Configuration.GetValue<bool>("UseParallel"))
-      {
-          services.AddHostedService<ParallelWorker>();
-          services.AddSingleton<ChannelProvider>();
-          services.AddSingleton(svcProvider =>
-          {
-              var channelProvider = svcProvider.GetRequiredService<ChannelProvider>();
+        services.AddSingleton(svcProvider =>
+        {
+            var channelProvider = svcProvider.GetRequiredService<ChannelProvider<string, string>>();
+            var consumerConfig = configuration.GetRequiredSection("Client").Get<ConsumerConfig>();
 
-              return new ConsumerBuilder<string, string>(config)
-                                            .SetPartitionsAssignedHandler(channelProvider.PartitionsAssignedHandler)
-                                            .SetPartitionsLostHandler(channelProvider.PartitionsLostHandler)
-                                            .Build();
-          });
-      }
-      else
-      {
-          services.AddHostedService<SerialWorker>();
-          services.AddSingleton(_ => new ConsumerBuilder<string, string>(config)
-                                            .Build());
-      }
-
-      services.AddSingleton<IProcessor<string, string>, Processor<string, string>>();
-  })
+            return new ConsumerBuilder<string, string>(consumerConfig)
+                                          .SetPartitionsAssignedHandler(channelProvider.PartitionsAssignedHandler)
+                                          .SetPartitionsLostHandler(channelProvider.PartitionsLostHandler)
+                                          .Build();
+        });
+        services.AddSingleton<Processor<string, string>>();
+        services.AddSingleton<ChannelProvider<string, string>>();
+        services.AddHostedService<Worker<string, string>>()
+                .Configure<WorkerOptions>(configuration);
+    })
     .Build();
 
 await host.RunAsync();
