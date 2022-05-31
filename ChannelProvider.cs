@@ -7,12 +7,9 @@ public sealed class ChannelProvider<TKey, TValue>
 {
     private readonly Dictionary<TopicPartition, Channel<ConsumeResult<TKey, TValue>>> channels;
     private readonly Dictionary<TopicPartition, Task> workers;
-    private readonly ILogger<ChannelProvider<TKey, TValue>> logger;
 
-    public ChannelProvider(ILogger<ChannelProvider<TKey, TValue>> logger)
+    public ChannelProvider()
     {
-        this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
         this.channels = new Dictionary<TopicPartition, Channel<ConsumeResult<TKey, TValue>>>();
         this.workers = new Dictionary<TopicPartition, Task>();
     }
@@ -32,40 +29,24 @@ public sealed class ChannelProvider<TKey, TValue>
         return channel.Writer;
     }
 
-    public IEnumerable<TopicPartitionOffset> PartitionsAssignedHandler(IConsumer<TKey, TValue> _, List<TopicPartition> tps)
+    internal void CreateTopicPartitionChannel(TopicPartition topicPartition)
     {
-        var tpos = new TopicPartitionOffset[tps.Count];
-        for (int i = 0; i < tps.Count; i++)
+        if (!channels.ContainsKey(topicPartition))
         {
-            logger.LogInformation("TopicPartition assigned: {TopicPartition}", tps[i]);
-
-            tpos[i] = new TopicPartitionOffset(tps[i], Offset.Unset);
-
-            if (!channels.ContainsKey(tps[i]))
+            var channel = Channel.CreateUnbounded<ConsumeResult<TKey, TValue>>(new UnboundedChannelOptions()
             {
-                var channel = Channel.CreateUnbounded<ConsumeResult<TKey, TValue>>(new UnboundedChannelOptions()
-                {
-                    AllowSynchronousContinuations = false,
-                    SingleReader = true,
-                    SingleWriter = true,
-                });
+                AllowSynchronousContinuations = false,
+                SingleReader = true,
+                SingleWriter = true,
+            });
 
-                channels.Add(tps[i], channel);
-            }
+            channels.Add(topicPartition, channel);
         }
-        return tpos;
     }
 
-    public IEnumerable<TopicPartitionOffset> PartitionsLostHandler(IConsumer<TKey, TValue> _, List<TopicPartitionOffset> tpos)
+    public void CompleteTopicPartitionChannel(TopicPartition topicPartition)
     {
-        foreach (var tpo in tpos)
-        {
-            logger.LogInformation("TopicPartition lost: {TopicPartition}", tpo.TopicPartition);
-
-            var channel = channels[tpo.TopicPartition];
-            channel.Writer.Complete();
-        }
-
-        return tpos;
+        var channel = channels[topicPartition];
+        channel.Writer.Complete();
     }
 }

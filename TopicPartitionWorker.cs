@@ -12,7 +12,7 @@ namespace KafkaParallelConsumer
         private readonly int commitPeriod;
 
         public TopicPartitionWorker(IConsumer<TKey, TValue> consumer, ChannelReader<ConsumeResult<TKey, TValue>> channelReader,
-            Func<ConsumeResult<TKey, TValue>, CancellationToken, Task> processingAction, bool commitSynchronous, int commitPeriod = 10)
+            Func<ConsumeResult<TKey, TValue>, CancellationToken, Task> processingAction, bool commitSynchronous, int commitPeriod = 5)
         {
             this.consumer = consumer;
             this.channelReader = channelReader ?? throw new ArgumentNullException(nameof(channelReader));

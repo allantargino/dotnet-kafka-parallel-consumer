@@ -13,18 +13,19 @@ IHost host = Host.CreateDefaultBuilder(args)
     {
         var configuration = hostContext.Configuration.GetRequiredSection("Kafka:Consumer");
 
-        services.AddSingleton(svcProvider =>
+        services.AddSingleton<ChannelProvider<string, string>>();
+        services.AddSingleton<KafkaPartitionsHandler<string, string>>();
+        services.AddSingleton(svc =>
         {
-            var channelProvider = svcProvider.GetRequiredService<ChannelProvider<string, string>>();
+            var partitionsHandler = svc.GetRequiredService<KafkaPartitionsHandler<string, string>>();
             var consumerConfig = configuration.GetRequiredSection("Client").Get<ConsumerConfig>();
 
             return new ConsumerBuilder<string, string>(consumerConfig)
-                                          .SetPartitionsAssignedHandler(channelProvider.PartitionsAssignedHandler)
-                                          .SetPartitionsLostHandler(channelProvider.PartitionsLostHandler)
+                                          .SetPartitionsAssignedHandler(partitionsHandler.PartitionsAssignedHandler)
+                                          .SetPartitionsLostHandler(partitionsHandler.PartitionsLostHandler)
                                           .Build();
         });
         services.AddSingleton<Processor<string, string>>();
-        services.AddSingleton<ChannelProvider<string, string>>();
         services.AddHostedService<Worker<string, string>>()
                 .Configure<WorkerOptions>(configuration);
     })
