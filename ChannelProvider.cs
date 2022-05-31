@@ -14,6 +14,21 @@ public sealed class ChannelProvider<TKey, TValue>
         this.workers = new Dictionary<TopicPartition, Task>();
     }
 
+    public void CreateTopicPartitionChannel(TopicPartition topicPartition)
+    {
+        if (!channels.ContainsKey(topicPartition))
+        {
+            var channel = Channel.CreateUnbounded<ConsumeResult<TKey, TValue>>(new UnboundedChannelOptions()
+            {
+                AllowSynchronousContinuations = false,
+                SingleReader = true,
+                SingleWriter = true,
+            });
+
+            channels.Add(topicPartition, channel);
+        }
+    }
+
     public ChannelWriter<ConsumeResult<TKey, TValue>> GetChannelWriter(IConsumer<TKey, TValue> consumer, TopicPartition topicPartition,
         Func<ConsumeResult<TKey, TValue>, CancellationToken, Task> processingAction, CancellationToken cancellationToken)
     {
@@ -27,21 +42,6 @@ public sealed class ChannelProvider<TKey, TValue>
         }
 
         return channel.Writer;
-    }
-
-    internal void CreateTopicPartitionChannel(TopicPartition topicPartition)
-    {
-        if (!channels.ContainsKey(topicPartition))
-        {
-            var channel = Channel.CreateUnbounded<ConsumeResult<TKey, TValue>>(new UnboundedChannelOptions()
-            {
-                AllowSynchronousContinuations = false,
-                SingleReader = true,
-                SingleWriter = true,
-            });
-
-            channels.Add(topicPartition, channel);
-        }
     }
 
     public void CompleteTopicPartitionChannel(TopicPartition topicPartition)
